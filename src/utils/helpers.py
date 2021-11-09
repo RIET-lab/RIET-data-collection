@@ -3,12 +3,16 @@ from rfc3339 import rfc3339
 import json
 import os
 import tweepy
+import time
+import logging
 
 # Global defaults
 VERSION = '2'
 PREFIX = 'https://api.twitter.com'
-MAX_RESULTS = 500 # API Max
+MAX_RESULTS = 100 # API Max by default
 TWEET_FIELDS = 'id,author_id,conversation_id,referenced_tweets,created_at'
+
+logger = logging.getLogger(__name__)
 
 #########################################################
 ########### handling / formatting / creds ###############
@@ -68,6 +72,12 @@ class TweetNode:
         
     def is_placeholder(self):
         return hasattr(self.tweet, "is_placeholder")
+    
+    def __getitem__(self, item):
+        """
+        Interfacing tweet properties
+        """
+        return self.tweet.get(item)
         
     def __hash__(self):
         return self.tweet.id
@@ -98,7 +108,23 @@ class TweetTree:
         self.root = root
         
     def __getitem__(self, node_id):
-        return nodes.get(node_id)
+        return self.nodes.get(node_id)
+    
+    def __len__(self):
+        return len(self.nodes)
+    
+    def get_depth(self):
+        cur_nodes = [self.root]
+        depth = 1
+        while True:
+            next_level = []
+            for node in cur_nodes:
+                next_level.extend(node.children)
+            if len(next_level): 
+                depth += 1
+                cur_nodes = next_level
+            else: break
+        return depth
     
     @classmethod
     def from_node(cls, client, node, is_root=False):
@@ -110,11 +136,11 @@ class TweetTree:
                                   node if is_root else None)
     
     @classmethod
-    def from_conversation_id(cls, client, conversation_id, root=None):
+    def from_conversation_id(cls, client, conversation_id, root=None, verbose=False):
         """
         Will make API calls to generate tree from conversation id
         """
-        tweets = get_conversation(client, conversation_id, get_root=root is None)
+        tweets = get_conversation(client, conversation_id, get_root=root is None, verbose=verbose)
         tweets = [TweetNode(tweet) for tweet in tweets]
         tree = cls(tweets[0])
         tree.nodes = cls.fill_in_nodes(tweets)
@@ -164,8 +190,12 @@ def get_conversation(client,
     )
     search_params.update(params)
     twitter_call = client.search_all_tweets if search_all else client.search_recent_tweets
-    response = twitter_call(**search_params)
-    data = response.data    
+    data = []
+        
+    for response in tweepy.Paginator(twitter_call, **search_params):
+        data.extend(response.data)
+        if verbose: logger.info(json.dumps(response.meta))
+        if response.meta.get('next_token'): time.sleep(1)
     
     if get_root:
         root_response = client.get_tweet(conversation_id, tweet_fields=search_params["tweet_fields"])
