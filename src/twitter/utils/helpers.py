@@ -113,7 +113,12 @@ class TweetTree:
     def __len__(self):
         return len(self.nodes)
     
-    def get_depth(self):
+    @property
+    def size(self):
+        return len(self)
+    
+    @property
+    def depth(self):
         cur_nodes = [self.root]
         depth = 1
         while True:
@@ -204,6 +209,40 @@ def get_conversation(client,
     return data
     
     
+def run_query(client,
+              query,
+              params={},
+              search_all=True,
+              verbose=False,
+              max_steps=10000):
+    """
+    Runs a query to get all results
+    Args:
+        client: tweepy Client
+        conversation_id: string of twitter conv id
+        search_params: params to update default
+        search_all: bool recent vs all twitter api
+        get_root: bool of whether to return root node as well
+        verbose: Log statements while running
+    Returns:
+        unstructured tweets
         
+    """
+    search_params = dict(
+        query=query,
+        tweet_fields=TWEET_FIELDS,
+        max_results=MAX_RESULTS
+    )
+    search_params.update(params)
+    twitter_call = client.search_all_tweets if search_all else client.search_recent_tweets
+    data = []
     
-        
+    cnt = 0
+    for response in tweepy.Paginator(twitter_call, **search_params):
+        cnt += 1
+        data.extend(response.data)
+        if verbose: logger.info(json.dumps(response.meta))
+        if cnt >= max_steps: break
+        if response.meta.get('next_token'): time.sleep(1)
+    
+    return data
