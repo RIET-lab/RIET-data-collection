@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 #########################################################
 
 def get_time(*args):
-    """
-    returns time in iso8601 for twitter API
+    """returns time in iso8601 for twitter API
+    arg order: y,m,d,h*,m*,s*,us* *=optional 
     """
     date = dt.datetime(*args)
     return rfc3339(date)
@@ -45,6 +45,27 @@ def get_credentials():
 #########################################################
 ########### API helpers #################################
 #########################################################
+
+def tweepy_loop(twitter_fn, search_params={}, verbose=False, max_steps=None):
+    """Runs a tweepy paginated loop
+    Args:
+        twitter_fn: tweepy call fn
+        search_params: params to add to fn
+        verbose: whether to print meta of results
+        max_steps: limit # of calls
+    Returns:
+        Unstructured results
+    """
+    data = []
+    cnt = 0
+    for response in tweepy.Paginator(twitter_fn, **search_params):
+        cnt += 1
+        data.extend(response.data)
+        if verbose: logger.info(json.dumps(response.meta))
+        if max_steps and cnt >= max_steps: break
+        if response.meta.get('next_token'): time.sleep(1)
+    
+    return data
 
 def get_conversation(client,
                      conversation_id,
