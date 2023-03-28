@@ -10,7 +10,7 @@ import logging
 VERSION = '2'
 PREFIX = 'https://api.twitter.com'
 MAX_RESULTS = 100 # API Max by default
-TWEET_FIELDS = 'id,author_id,conversation_id,referenced_tweets,created_at'
+TWEET_FIELDS = 'id,author_id,conversation_id,referenced_tweets,created_at,entities'
 
 logger = logging.getLogger(__name__)
 
@@ -138,8 +138,8 @@ def run_query(client,
     cnt = 0
     for response in tweepy.Paginator(twitter_call, **search_params):
         cnt += 1
-        data.extend(response.data)
-        if verbose: logger.info(json.dumps(response.meta))
+        if response.data: data.extend(response.data)
+        if verbose and response.meta: logger.info(json.dumps(response.meta))
         if cnt >= max_steps: break
         if response.meta.get('next_token'): time.sleep(1)
     
