@@ -1,26 +1,20 @@
 import setuptools
+from pip._internal.req import parse_requirements
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
+    
+install_reqs = parse_requirements("requirements.txt", session="reqs")
+reqs = [str(ir.requirement) for ir in install_reqs]
 
 setuptools.setup(
     name="riet",
     version="0.0.1",
-    # author="Example Author",
-    # author_email="michael.shliselberg@uconn.edu",
-    # description="A small example package",
-    # long_description=long_description,
-    # long_description_content_type="text/markdown",
-    # url="https://github.com/pypa/sampleproject",
-    # project_urls={
-    #     "Bug Tracker": "https://github.com/pypa/sampleproject/issues",
-    # },
-    # classifiers=[
-    #     "Programming Language :: Python :: 3",
-    #     "License :: OSI Approved :: MIT License",
-    #     "Operating System :: OS Independent",
-    # ],
+    description="data utils for queries / streams. Currently implemented is twitter",
+    author='Michael Shliselberg',
+    author_email='michael.shliselberg@uconn.edu',
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
+    install_requires=install_reqs
 )
