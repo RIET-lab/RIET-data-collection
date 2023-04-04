@@ -112,7 +112,8 @@ def run_query(client,
               params={},
               search_all=True,
               verbose=False,
-              max_steps=10000):
+              max_steps=10000,
+              manual_wait_on_delay_steps=None):
     """
     Runs a query to get all results
     Args:
@@ -136,11 +137,25 @@ def run_query(client,
     data = []
     
     cnt = 0
-    for response in tweepy.Paginator(twitter_call, **search_params):
-        cnt += 1
-        if response.data: data.extend(response.data)
-        if verbose and response.meta: logger.info(json.dumps(response.meta))
-        if cnt >= max_steps: break
-        if response.meta.get('next_token'): time.sleep(1)
-    
+    delay_steps = 0
+    while True:
+        try:
+            for response in tweepy.Paginator(twitter_call, **search_params):
+                cnt += 1
+                if response.data: data.extend(response.data)
+                if verbose and response.meta: logger.info(json.dumps(response.meta))
+                if cnt >= max_steps: break
+                if response.meta.get('next_token'): 
+                    search_params["pagination_token"] = response.meta.get('next_token')
+                    time.sleep(1)
+                delay_steps = 0
+            break
+        except Exception as e:
+            if manual_wait_on_delay_steps and e.response.status_code == 429:
+                if delay_steps >= manual_wait_on_delay_steps: break
+                delay_steps += 1
+                print(f"delay step: {delay_steps}, retrying on a too-many reqs errors after a 30-second delay")
+                time.sleep(30)
+                continue
+            
     return data

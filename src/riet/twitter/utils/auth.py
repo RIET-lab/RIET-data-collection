@@ -4,7 +4,9 @@ import tweepy
 
 SECRET_NAMES = dict(
     mes21010 = "TwitterAPICredential-mes21010",
-    shiridh = "TwitterAPICredential-shiridh"
+    shiridh = "TwitterAPICredential-shiridh",
+    ezequiel = "TwitterAPICredential-ezequiel",
+    fabricio = "TwitterAPICredential-fabricio"
 )
 
 def get_secret(aws_credentials, credentials_user):
